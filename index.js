@@ -4,6 +4,18 @@ const app = express();
 
 app.use(express.json());
 
+const dotenv = require("dotenv");
+
+const mongoose = require("mongoose");
+
+dotenv.config();
+
+const MONGODB_URL = process.env.MONGODB_URL;
+
+const userModel = require("./userSchema");
+
+
+
 
 app.get("/",(req,res)=>{
     return res.status(200).send("This is practice backend");
@@ -13,20 +25,18 @@ app.get("/ping",(req,res)=>{
     return res.status(200).send("pong");
 })
 
-let user = [
-    {id:1,username:"Sandeep",email:"s@gmail.com",password:"123456789",dob:"1/1/1930"}
-]
 
-app.get("/users",(req,res)=>{
+app.get("/users",async(req,res)=>{
     try {
-        return res.status(200).send({message:"sucessfully",user})
+        const users = await userModel.find();
+        return res.status(200).send({message:"sucessfully",users})
     } catch (error) {
         return res.status(500).send({message:"something went wrong"});
     }
 })
 
 
-app.post("/createuser",(req,res)=>{
+app.post("/createuser",async(req,res)=>{
     try {
         const {username,email,password,dob} = req.body;
 
@@ -42,11 +52,19 @@ app.post("/createuser",(req,res)=>{
             return res.status(400).send({message:"pass length should be gtr 8 and lst 16"});
         }
 
-        user.push({
-            username,email,password,dob,id:user.length+1
+        console.log(dob,new Date(dob));
+
+        const user = await new userModel({
+            username,
+            email,
+            password,
+            dob:new Date(dob)
         })
 
-        return res.status(201).send({message:"user created sucessfully"})
+        await user.save();
+
+
+        return res.status(201).send({message:"user created sucessfully",user})
 
     } catch (error) {
         return res.status(500).send({message:"something went wrong"});
@@ -56,6 +74,16 @@ app.post("/createuser",(req,res)=>{
 
 
 
-app.listen(8080,()=>{
-    console.log("connected to server sucessfully")
+
+
+mongoose.connect(MONGODB_URL)
+.then(()=>{
+    app.listen(8080,()=>{
+        console.log("connected to server sucessfully")
+    })
 })
+.catch((err)=>{
+    console.log(err);
+    console.log("Error connecting to mongodb");
+})
+
